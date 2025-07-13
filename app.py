@@ -3,6 +3,7 @@
 import streamlit as st
 import pandas as pd
 from filters import apply_all_filters
+from utils import plot_stock_chart
 
 st.set_page_config(page_title="📊 Smart Money Screener", layout="wide")
 st.title("📊 Smart Money Stock Screener")
@@ -15,12 +16,21 @@ with st.sidebar:
     rsi_threshold = st.slider("Min RSI", 40, 80, 60)
     beta_threshold = st.slider("Max Beta", 0.5, 2.0, 1.2)
     market_caps = st.multiselect("Market Cap Categories", ["Smallcap", "Midcap", "Largecap"], ["Smallcap", "Midcap", "Largecap"])
+    sector_filter = st.text_input("Sector (optional):")
 
 if st.button("🔍 Run Screener"):
     with st.spinner("Fetching and filtering stocks..."):
-        result_df = apply_all_filters(price_range, min_roe, max_de_ratio, rsi_threshold, beta_threshold, market_caps)
+        result_df = apply_all_filters(price_range, min_roe, max_de_ratio, rsi_threshold, beta_threshold, market_caps, sector_filter)
         st.success(f"Found {len(result_df)} matching stocks")
-        st.dataframe(result_df)
 
-        csv = result_df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Results", csv, "smart_money_results.csv", "text/csv")
+        if not result_df.empty:
+            st.dataframe(result_df)
+
+            for i, row in result_df.iterrows():
+                with st.expander(f"📈 {row['Symbol']} ({row['Company']}) Chart"):
+                    plot_stock_chart(row['Symbol'])
+
+            csv = result_df.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Download Results", csv, "smart_money_results.csv", "text/csv")
+        else:
+            st.warning("No matching stocks found.")
